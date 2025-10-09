@@ -1,4 +1,4 @@
-# Decision-security
+# Decision Security
 
 Reusable **decision-science utilities for security** — Monte Carlo risk bands, Bayesian updates & calibration, survival helpers, Value of Information, light causal helpers, and visualization.
 
@@ -30,11 +30,6 @@ print(var_es(losses))          # (VaR95, ES95)
 Status: 0.x (APIs may change). MIT License.
 
 See docs & examples: Security Decision Science Book and the Security Decision Labs playground.
-
-
-### `LICENSE` (MIT)
-```text
-MIT License
 
 Copyright (c) 2025 Your Name
 
