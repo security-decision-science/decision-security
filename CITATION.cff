@@ -17,4 +17,4 @@ repository-code: "https://github.com/security-decision-science/decision-security
 license: MIT
 version: "0.1.0a1"
 date-released: "2025-10-09"
-doi: ""  # To do after Zenodo DOI for first release
+doi: ""
