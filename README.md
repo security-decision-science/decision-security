@@ -41,3 +41,7 @@ print(var_es(losses))          # (VaR95, ES95)
 Status: 0.x (APIs may change). MIT License.
 
 See docs & examples: Security Decision Science Book and the Security Decision Labs playground.
+
+## Contributing
+
+Issues and PRs welcome. For non-public questions, contact me on LinkedIn.
