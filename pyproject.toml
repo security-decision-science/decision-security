@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "decision-security"                    # PyPI name (hyphen)
+version = "0a1.post1"                            # pre-release (alpha)
+description = "Reusable decision-science utilities for security: Monte Carlo, Bayes, Survival, VoI, causal helpers, and viz."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{ name = "Laura Voicu" }]
+keywords = ["cybersecurity","risk","bayesian","survival","monte carlo","causal","value of information"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Development Status :: 3 - Alpha",
+  "Topic :: Security",
+  "Intended Audience :: Developers",
+]
+
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.10",
+  "pandas>=1.5",
+  "matplotlib>=3.6",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7","pytest-cov>=4","mypy>=1.8","ruff>=0.4"]
+
+[project.urls]
+Homepage = "https://github.com/security-decision-science/decision-security"
+Repository = "https://github.com/security-decision-science/decision-security"
+Issues = "https://github.com/security-decision-science/decision-security/issues"
+Documentation = "https://github.com/security-decision-science/security-decision-science-book"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/decision_security"]
