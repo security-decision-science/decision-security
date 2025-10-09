@@ -1,7 +1,7 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
-# Delegate metadata to pyproject.toml; just control package discovery here.
+# Map the package name to the 'src' directory, which already has __init__.py and your modules.
 setup(
-    package_dir={"": "src"},
-    packages=find_packages(where="src", include=["decision_security", "decision_security.*"]),
+    packages=["decision_security"],          # the install-time package name
+    package_dir={"decision_security": "src"} # where its code lives on disk
 )

@@ -3,16 +3,14 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "decision-security"                     # PyPI name (import is decision_security)
-version = "0.1.0a6"                            # bump when you publish again
-description = "Decision-science utilities for security: Monte Carlo, Bayes, Survival, Value of Information, causal helpers, and viz."
+name = "decision-security"
+version = "0.1.0a7"                 # bump
+description = "Decision-science utilities for security: Monte Carlo, Bayes, Survival, VoI, causal, viz."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-
-authors = [
-  { name = "Laura Voicu" }
-]
+authors = [{ name = "Laura Voicu" }]
+dependencies = ["numpy>=1.23","scipy>=1.10","pandas>=1.5","matplotlib>=3.6"]
 
 keywords = [
   "cybersecurity",
