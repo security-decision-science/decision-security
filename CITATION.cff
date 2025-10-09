@@ -3,8 +3,7 @@ message: "If you use this work, please cite it."
 title: "decision-security: decision-science utilities for security"
 authors:
   - family-names: Voicu
-    given-names: Laura Cristiana
-    orcid: "https://orcid.org/0000-0000-0000-0000"   # optional
+    given-names: Laura
 keywords:
   - cybersecurity
   - risk quantification
@@ -17,4 +16,4 @@ repository-code: "https://github.com/security-decision-science/decision-security
 license: MIT
 version: "0.1.0a1"
 date-released: "2025-10-09"
-doi: ""  # To fill after Zenodo mints a DOI for your first release
+doi: ""  # To do after Zenodo DOI for first release
