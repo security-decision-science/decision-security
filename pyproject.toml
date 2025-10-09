@@ -3,31 +3,24 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "decision-security"
-version = "0.1.0a7"                 # bump
-description = "Decision-science utilities for security: Monte Carlo, Bayes, Survival, VoI, causal, viz."
+name = "decision-security"                     # pip name (import is decision_security)
+version = "0.1.0a7"                            # bump from prior version
+description = "Decision-science utilities for security: Monte Carlo, Bayes, Survival, Value of Information, causal helpers, and viz."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
+
 authors = [{ name = "Laura Voicu" }]
-dependencies = ["numpy>=1.23","scipy>=1.10","pandas>=1.5","matplotlib>=3.6"]
 
 keywords = [
-  "cybersecurity",
-  "decision-science",
-  "risk quantification",
-  "monte carlo",
-  "bayesian",
-  "survival analysis",
-  "causal inference",
-  "value of information",
-  "python"
+  "cybersecurity", "decision-science", "risk quantification",
+  "monte carlo", "bayesian", "survival analysis", "causal inference",
+  "value of information", "python"
 ]
 
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
-  "Intended Audience :: Information Technology",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.9",
@@ -35,7 +28,6 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Topic :: Security",
-  "Topic :: Scientific/Engineering",
   "Topic :: Scientific/Engineering :: Information Analysis"
 ]
 
@@ -47,12 +39,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
-  "pytest>=7",
-  "pytest-cov>=4",
-  "mypy>=1.8",
-  "ruff>=0.4"
-]
+test = ["pytest>=7", "pytest-cov>=4", "mypy>=1.8", "ruff>=0.4"]
 
 [project.urls]
 Homepage = "https://github.com/security-decision-science/decision-security"
