@@ -3,7 +3,7 @@
 Reusable **decision-science utilities for security** — Monte Carlo risk bands, Bayesian updates & calibration, survival helpers, Value of Information, light causal helpers, and visualization.
 
 ```bash
-pip install decision-security  # (will install once you publish)
+pip install decision-security 
 ```
 
 ## Quickstart
