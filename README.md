@@ -38,9 +38,13 @@ print(var_es(losses))          # (VaR95, ES95)
 	•	causal: tiny DAG utilities (parents, descendants, naive backdoor set).
 	•	viz: small matplotlib helpers (loss distribution, risk bands, KM curves).
 
-Status: 0.x (APIs may change). MIT License.
+## Status
 
-See docs & examples: Security Decision Science Book and the Security Decision Labs playground.
+0.x (APIs may change).
+
+## Docs & examples 
+
+Security Decision Science Book and the Security Decision Labs playground (coming soon).
 
 ## Contributing
 
