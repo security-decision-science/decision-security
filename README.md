@@ -1,6 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/decision-security?label=PyPI&include_prereleases)](https://pypi.org/project/decision-security/)
 [![Python versions](https://img.shields.io/pypi/pyversions/decision-security.svg)](https://pypi.org/project/decision-security/)
 [![CI](https://github.com/security-decision-science/decision-security/actions/workflows/ci.yml/badge.svg)](https://github.com/security-decision-science/decision-security/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/security-decision-science/decision-security/badge)](https://scorecard.dev/viewer/?uri=github.com/security-decision-science/decision-security)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) 
 [![Linkedin Badge](https://img.shields.io/badge/-LinkedIn-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/voiculaura/)](https://www.linkedin.com/in/voiculaura/)
 
