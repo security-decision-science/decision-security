@@ -1,0 +1,37 @@
+name: Bug report
+description: File a bug report
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us what you expected to happen.
+      placeholder: A clear and concise description...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the issue
+      placeholder: "1. Go to ...\n2. Run ...\n3. See error ..."
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Git SHA or release/tag (if any)
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - app
+        - CI/CD (GitHub Actions)
+        - docs
+        - other
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      render: shell
