@@ -1,20 +1,59 @@
-name: Publish (PyPI)
+name: Release
+
 on:
   push:
-    tags: ["v*"]       # e.g., v0.1.0a1, v0.1.0
+    tags: [ 'v*.*.*' ]
+  workflow_dispatch: {}
+
+# Read-only by default
 permissions:
-  id-token: write
   contents: read
+
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v6
-        with: { python-version: "3.12" }
-      - run: python -m pip install -U pip build
-      - run: python -m build
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Harden runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
-          verbose: true
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        with:
+          python-version: "3.12"
+
+      - name: Build dists
+        run: |
+          pip install -U build
+          python -m build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: dist/*
+
+  publish-pypi:
+    if: ${{ false }}  # set to true when ready
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # required only for OIDC-based PyPI publish
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI (OIDC)
+        uses: pypa/gh-action-pypi-publish@f8d218034565c4b29629e190f46f5d54e3637bf4 # v1.12.2
+        with:
+          print-hash: true

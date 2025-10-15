@@ -3,20 +3,42 @@ name: CI (build & import)
 on:
   workflow_dispatch:
 
+# Least-privilege token by default
+permissions:
+  contents: read
+
 jobs:
   build-smoke:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v6
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
         with:
           python-version: "3.12"
 
+      # Use pipx to avoid un-hashed pip installs in workflows
+      - name: Install pipx + build tool (pinned)
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y pipx
+          pipx ensurepath
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # build provides the "pyproject-build" console script
+          pipx install build==1.2.2
+
       - name: Build wheel
         run: |
-          python -m pip install -U pip build setuptools wheel
-          python -m build
+          pyproject-build -o dist
 
       - name: Inspect wheel has package files
         run: |
@@ -30,10 +52,12 @@ jobs:
             assert len(names) > 0, "Wheel missing decision_security/*"
           PY
 
-      - name: Install & import smoke
+      - name: Import smoke from wheel (no install)
         run: |
-          python -m pip install dist/*.whl
           python - <<'PY'
+          import glob, sys
+          whl = glob.glob("dist/*.whl")[0]
+          sys.path.insert(0, whl)  # allow import from wheel zip
           from decision_security.synth import sample
           print("Smoke OK:", sample("poisson", 5, lam=1.0))
           PY
