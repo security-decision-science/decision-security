@@ -5,7 +5,7 @@ on:
     tags: [ 'v*.*.*' ]
   workflow_dispatch: {}
 
-# Read-only by default
+# Least-privilege by default
 permissions:
   contents: read
 
@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
@@ -24,14 +25,23 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7 # v6
         with:
           python-version: "3.12"
 
-      - name: Build dists
+      # No pip install here: use pipx with a pinned version of 'build'
+      - name: Install pipx + build (pinned)
         run: |
-          pip install -U build
-          python -m build
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y pipx
+          pipx ensurepath
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          pipx install build==1.2.2
+
+      - name: Build distributions
+        run: |
+          pyproject-build -o dist
 
       - name: Upload build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -39,14 +49,22 @@ jobs:
           name: dist
           path: dist/*
 
+  # Enable when ready to publish to PyPI with OIDC (no API token needed).
   publish-pypi:
-    if: ${{ false }}  # set to true when ready
+    # Run only on tag pushes that built artifacts
+    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # required only for OIDC-based PyPI publish
+      id-token: write   # required for OIDC to PyPI
+
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
       - name: Download build artifact
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
