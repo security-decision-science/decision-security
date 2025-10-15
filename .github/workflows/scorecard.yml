@@ -1,0 +1,67 @@
+name: OpenSSF Scorecard
+
+on:
+  schedule:
+    - cron: '37 9 * * 2'  # Tuesdays 09:37 UTC
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch: {}
+
+# Least privilege by default
+permissions:
+  contents: read
+
+jobs:
+  scorecard:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write          # needed only to publish to scorecard.dev
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      # No checkout needed for Scorecard itself
+      - name: Run Scorecard
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          publish_results: true
+          results_format: sarif
+          results_file: results.sarif
+
+      # Hand off SARIF to next job (keeps least-privilege here)
+      - name: Upload SARIF artifact (handoff)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scorecard-sarif
+          path: results.sarif
+          retention-days: 5
+
+  upload-sarif:
+    name: Upload SARIF to Code Scanning
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true
+    needs: scorecard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # confined to this job only
+    steps:
+      - name: Checkout (required for fingerprinting)
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493  # v4
+
+      - name: Download SARIF artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4
+        with:
+          name: scorecard-sarif
+          path: .
+
+      - name: Upload SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@f443b600d91635bebf5b0d9ebc620189c0d6fba5 # v4.30.8
+        with:
+          sarif_file: results.sarif
+          wait-for-processing: true
