@@ -18,18 +18,16 @@ jobs:
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
-        with:
-          egress-policy: audit
 
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7 # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
         with:
           python-version: "3.12"
 
-      # No pip install here: use pipx with a pinned version of 'build'
+      # Use pipx (pinned) to avoid raw pip installs in workflows
       - name: Install pipx + build (pinned)
         run: |
           set -euxo pipefail
@@ -49,21 +47,17 @@ jobs:
           name: dist
           path: dist/*
 
-  # Enable when ready to publish to PyPI with OIDC (no API token needed).
   publish-pypi:
-    # Run only on tag pushes that built artifacts
     if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # required for OIDC to PyPI
+      id-token: write   # OIDC for PyPI
 
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
-        with:
-          egress-policy: audit
 
       - name: Download build artifact
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
