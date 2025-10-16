@@ -50,7 +50,4 @@ PyPI = "https://pypi.org/project/decision-security/"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["decision_security*"]
+packages = ["decision_security"]  
