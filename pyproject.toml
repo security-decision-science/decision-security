@@ -47,3 +47,10 @@ Repository = "https://github.com/security-decision-science/decision-security"
 Issues = "https://github.com/security-decision-science/decision-security/issues"
 Documentation = "https://github.com/security-decision-science/security-decision-science"
 PyPI = "https://pypi.org/project/decision-security/"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["decision_security*"]
