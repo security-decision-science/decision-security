@@ -79,6 +79,31 @@ jobs:
         run: |
           set -euxo pipefail
           shopt -s nullglob
+          # The attestation can take a few seconds to become queriable; retry a bit.
+          for f in dist/*.whl dist/*.tar.gz; do
+            out="${f}.intoto.jsonl"
+            ok=0
+            for i in 1 2 3 4 5; do
+              if gh attestation download --repo "$REPO" "$f" --format=jsonl > "$out"; then
+                ok=1; break
+              fi
+              echo "Attestation not ready for $f (attempt $i/5). Sleeping 5s…"
+              sleep 5
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "WARNING: no attestation found for $f; continuing without ${out}"
+              rm -f "$out" || true
+            fi
+          done
+          ls -l dist || true
+          
+      - name: Download per-artifact provenance (*.intoto.jsonl)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euxo pipefail
+          shopt -s nullglob
           for f in dist/*.whl dist/*.tar.gz; do
             out="${f}.intoto.jsonl"
             if gh attestation download --repo "$REPO" "$f" --format=jsonl > "$out"; then
@@ -103,7 +128,7 @@ jobs:
             echo "Found legacy .sig/.crt pair(s)."
           else
             echo "No signature artifacts found in dist/"; exit 1
-          fi
+        fi
     
       # Create / update GitHub Release and attach all assets (dists + sigs + provenance)
       - name: Create GitHub Release (attach assets)
