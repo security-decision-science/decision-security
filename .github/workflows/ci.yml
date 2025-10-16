@@ -80,11 +80,7 @@ jobs:
           print("Smoke OK:", sample("poisson", 5, lam=1.0))
           PY
 
-      # Runs tests if you add any under tests/; otherwise cleanly skips.
+      # Runs pytest only if there are tests in tests/**/*.py
       - name: Run tests (pytest if present)
-        run: |
-          if ls -1 tests/*.py tests/**/*.py 2>/dev/null | grep -q .; then
-            pytest -q
-          else
-            echo "No tests/ found; skipping pytest."
-          fi
+        if: ${{ hashFiles('tests/**/*.py') != '' }}
+        run: pytest -q
