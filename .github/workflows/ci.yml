@@ -54,8 +54,20 @@ jobs:
             assert len(names) > 0, "Wheel missing decision_security/*"
           PY
 
-      # OPTIONAL: if you later add a hash-locked runtime deps file, CI will install it securely.
-      # This line uses --require-hashes, so Scorecard will NOT flag it.
+      - name: Minimal fuzzer (time-boxed 60s)
+        run: |
+          # install your wheel so imports work (pulls numpy/scipy etc. as deps)
+          python -m pip install -U pip
+          python -m pip install dist/*.whl
+          # run the fuzzer if present (non-blocking or blocking: pick ONE line)
+          if [ -f tools/fuzz_synth.py ]; then
+            python tools/fuzz_synth.py --iterations 600 --timeout-sec 60
+            # If you prefer advisory-only while implementing, use:
+            # python tools/fuzz_synth.py --iterations 600 --timeout-sec 60 || true
+          else
+            echo "No tools/fuzz_synth.py; skipping fuzz."
+          fi
+          
       - name: Install runtime deps (if lock present)
         run: |
           if [ -f requirements-runtime.lock ]; then
