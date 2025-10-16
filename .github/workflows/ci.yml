@@ -33,19 +33,25 @@ jobs:
         run: |
           python -m pip install --require-hashes -r .github/requirements-build.lock
 
-      - name: Build wheel
-        run: python -m build -o dist
+      - name: Clean dist
+        run: rm -rf dist/* || true
 
-      - name: Inspect wheel has package files
+      - name: Build wheel
+        run: pyproject-build -o dist
+
+      - name: Inspect wheel contents (show first 40 entries)
         run: |
           python - <<'PY'
           import glob, zipfile
           whl = glob.glob("dist/*.whl")[0]
           print("Wheel:", whl)
           with zipfile.ZipFile(whl) as z:
-            names = [n for n in z.namelist() if n.startswith("decision_security/")]
-            print("Files in package:", len(names))
-            assert names, "Wheel missing decision_security/*"
+            names = z.namelist()
+            pkg = [n for n in names if n.startswith("decision_security/")]
+            print("Files in package:", len(pkg))
+            print("\n".join(pkg[:40]))
+            assert pkg, "Wheel missing decision_security/*"
+            assert any(n.endswith(".dist-info/METADATA") for n in names), "Wheel missing .dist-info/METADATA"
           PY
 
       # Install runtime deps from HASHED lock, then install the local wheel WITH its hash

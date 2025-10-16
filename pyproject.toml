@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decision-security"                     # pip name (import is decision_security)
-version = "0.1.0a8"                            # bump from prior version
+version = "0.1.0a9"                            # bump from prior version
 description = "Decision-science utilities for security: Monte Carlo, Bayes, Survival, Value of Information, causal helpers, and viz."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -50,4 +50,4 @@ PyPI = "https://pypi.org/project/decision-security/"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["decision_security"]  
+packages = ["decision_security"] 
