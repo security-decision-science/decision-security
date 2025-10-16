@@ -33,8 +33,8 @@ jobs:
           pipx ensurepath
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           pipx install build==1.2.2
-          pipx install twine==5.1.1
-          pipx install sigstore==3.6.3   # CLI used to produce .sig + .crt
+          # pipx install twine==5.1.1
+          # pipx install sigstore==3.6.3   # CLI used to produce .sig + .crt
 
       # Tag must match version in pyproject.toml (vX.Y.Z vs X.Y.Z)
       - name: Check version matches tag
@@ -72,7 +72,6 @@ jobs:
         with:
           subject-path: 'dist/*'
 
-      # Download the intoto JSONL for each artifact so Scorecard can see it
       - name: Download per-artifact provenance (*.intoto.jsonl)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -82,29 +81,25 @@ jobs:
           shopt -s nullglob
           for f in dist/*.whl dist/*.tar.gz; do
             out="${f}.intoto.jsonl"
-            # Use path form; gh computes sha256 and fetches the attestation
             if gh attestation download --repo "$REPO" "$f" --format=jsonl > "$out"; then
               echo "Saved: $out"
             else
-              echo "No attestation found yet for $f (continuing)"
-              rm -f "$out" || true
+              echo "No attestation found yet for $f (continuing)"; rm -f "$out" || true
             fi
           done
-          ls -l dist || true
 
-      - name: Sigstore sign artifacts (.sig + .crt)
+      - name: Sign wheels and sdists (Sigstore)
+        uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84
+        with:
+          inputs: dist/*
+          release-signing-artifacts: false 
+
+      - name: Verify signature artifacts exist
         run: |
-          set -euxo pipefail
-          # Fallback: if 'sigstore' not found for any reason, install into job's Python
-          command -v sigstore >/dev/null 2>&1 || python -m pip install 'sigstore==3.6.3'
-          for f in dist/*.whl dist/*.tar.gz; do
-            # produce detached signature + certificate per artifact
-            sigstore sign --yes \
-              --output-signature "${f}.sig" \
-              --output-certificate "${f}.crt" \
-              "$f"
-          done
-
+          ls -al dist
+          test -n "$(ls dist/*.sig 2>/dev/null)" || (echo "No .sig files produced" && exit 1)
+          test -n "$(ls dist/*.crt 2>/dev/null)" || (echo "No .crt files produced" && exit 1)
+    
       # Create / update GitHub Release and attach all assets (dists + sigs + provenance)
       - name: Create GitHub Release (attach assets)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7 # v2.3.4
