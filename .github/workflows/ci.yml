@@ -1,7 +1,11 @@
 name: CI (build & import)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: {}
 
 # Least-privilege token by default
 permissions:
@@ -21,24 +25,23 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7 # v6
         with:
           python-version: "3.12"
 
-      # Use pipx to avoid un-hashed pip installs in workflows
-      - name: Install pipx + build tool (pinned)
+      # Use pipx so there are no raw pip installs in workflows
+      - name: Install pipx + tools (pinned)
         run: |
           set -euxo pipefail
           sudo apt-get update
           sudo apt-get install -y pipx
           pipx ensurepath
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          # build provides the "pyproject-build" console script
           pipx install build==1.2.2
+          pipx install pytest==8.3.3
 
       - name: Build wheel
-        run: |
-          pyproject-build -o dist
+        run: pyproject-build -o dist
 
       - name: Inspect wheel has package files
         run: |
@@ -61,3 +64,12 @@ jobs:
           from decision_security.synth import sample
           print("Smoke OK:", sample("poisson", 5, lam=1.0))
           PY
+
+      # This step runs tests when you add them; otherwise it cleanly skips.
+      - name: Run tests (pytest if present)
+        run: |
+          if ls -1 tests/*.py tests/**/*.py 2>/dev/null | grep -q .; then
+            pytest -q
+          else
+            echo "No tests/ found; skipping pytest."
+          fi
