@@ -70,10 +70,18 @@ jobs:
         with:
           subject-path: 'dist/*'
 
+      - name: Save provenance bundle for release
+        run: |
+          echo "Bundle path: ${{ steps.prov.outputs.bundle-path }}"
+          test -n "${{ steps.prov.outputs.bundle-path }}" || { echo "No bundle-path from provenance step"; exit 1; }
+          # Name it the way Scorecard likes for SLSA provenance:
+          cp "${{ steps.prov.outputs.bundle-path }}" "dist/attestation.intoto.jsonl"
+
       - name: Sign wheels and sdists (Sigstore)
         uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84
         with:
           inputs: dist/*
+          upload-signing-artifacts: true 
 
       - name: Show signed files
         run: ls -al dist
@@ -84,8 +92,10 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/*.whl
-            dist/*.sig        # produced by Sigstore
-            dist/*.crt        # produced by Sigstore
+            dist/*.sig
+            dist/*.crt
+            dist/*.sigstore
+            dist/attestation.intoto.jsonl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -95,18 +105,15 @@ jobs:
         run: |
           PKG="decision-security"
           VER="${GITHUB_REF_NAME#v}"
-          python - "$PKG" "$VER" <<'PY'
+          python - <<PY || exit 0
             import json, sys, urllib.request
-            pkg, ver = sys.argv[1], sys.argv[2]
-            try:
-              with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
-                data = json.load(r)
-              if ver in data.get("releases", {}):
-                print(f"Version {ver} already on PyPI; skipping publish.")
-                raise SystemExit(0)    # success -> we will skip publish
-          except Exception as e:
-            print("PyPI check error or no releases yet:", e)
-            raise SystemExit(1)            # not found -> publish
+            pkg = sys.argv[1]; ver = sys.argv[2]
+            with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
+              data = json.load(r)
+            if ver in data.get("releases", {}):
+              print(f"Version {ver} already on PyPI; skipping publish.")
+              sys.exit(78)  # neutral
+          python - "$PKG" "$VER" <<'PY' || exit 0
           PY
         continue-on-error: true
 
