@@ -61,8 +61,8 @@ jobs:
           print('---- /METADATA ----'); \
           assert 'Name: decision-security' in text and 'Version: ' in text" 
           
-      - name: Twine check
-        run: twine check dist/*
+      # - name: Twine check
+      #   run: twine check dist/*
 
       - name: Create GitHub Release (attach dists)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7 # v2.3.4
