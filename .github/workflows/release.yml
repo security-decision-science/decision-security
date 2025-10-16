@@ -128,7 +128,7 @@ jobs:
             echo "Found legacy .sig/.crt pair(s)."
           else
             echo "No signature artifacts found in dist/"; exit 1
-        fi
+          fi
     
       # Create / update GitHub Release and attach all assets (dists + sigs + provenance)
       - name: Create GitHub Release (attach assets)
