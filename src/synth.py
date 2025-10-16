@@ -204,11 +204,16 @@ def _lognormal_mu_sigma_from_quantiles(x1, p1, x2, p2):
         raise ValueError("lognormal quantiles: p1,p2 must be in (0,1)")
     if not (0.0 < x1 < x2):
         raise ValueError("lognormal quantiles: require 0 < x1 < x2")
+
     z1 = norm.ppf(p1); z2 = norm.ppf(p2)
-    if not np.isfinite(z1) or not np.isfinite(z2) or z1 == z2:
-        raise ValueError("lognormal quantiles: invalid or identical p1,p2")
-    sigma = (log(x2) - log(x1)) / (z2 - z1)
-    if not np.isfinite(sigma) or sigma <= 0:
-        raise ValueError("lognormal quantiles: solved sigma must be > 0")
+    dz = z2 - z1
+    # New: reject nearly-equal percentiles (ill-conditioned)
+    if not np.isfinite(z1) or not np.isfinite(z2) or abs(dz) < 1e-3:
+        raise ValueError("lognormal quantiles: p1 and p2 too close or invalid")
+
+    sigma = (log(x2) - log(x1)) / dz
+    # New: sanity bound on sigma to avoid numerical blowups in RNG
+    if not np.isfinite(sigma) or sigma <= 0 or sigma > 8.0:
+        raise ValueError("lognormal quantiles: solved sigma invalid or too large")
     mu = log(x1) - sigma * z1
     return float(mu), float(sigma)
