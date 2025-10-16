@@ -65,28 +65,42 @@ jobs:
           
       # - name: Twine check
       #   run: twine check dist/*
+      - name: Show built files
+        run: ls -l dist
+
+      # Create SLSA provenance (stores in GitHub Attestations, and also emits a local bundle path)
       - name: Generate SLSA provenance for dist/*
+        id: prov
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
         with:
-          subject-path: 'dist/*'
+          subject-path: 'dist/*'   # wheel and sdist
 
-      - name: Save provenance bundle for release
+      # If a local bundle was produced, copy it into dist/ so it’s attached to the Release
+      - name: Save provenance bundle for release (if present)
+        if: ${{ steps.prov.outputs.bundle-path != '' }}
         run: |
           echo "Bundle path: ${{ steps.prov.outputs.bundle-path }}"
-          test -n "${{ steps.prov.outputs.bundle-path }}" || { echo "No bundle-path from provenance step"; exit 1; }
-          # Name it the way Scorecard likes for SLSA provenance:
-          cp "${{ steps.prov.outputs.bundle-path }}" "dist/attestation.intoto.jsonl"
+          cp "${{ steps.prov.outputs.bundle-path }}" dist/provenance.intoto.jsonl
 
+      - name: Show attestation link
+        run: |
+          echo "Attestation URL: ${{ steps.prov.outputs.attestation-url }}"
+
+      # Sign artifacts with Sigstore (writes .sig and .crt next to files in dist/)
       - name: Sign wheels and sdists (Sigstore)
         uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84
         with:
           inputs: dist/*
-          upload-signing-artifacts: true 
 
-      - name: Show signed files
-        run: ls -al dist
-        
-      - name: Create GitHub Release (attach dists)
+      - name: Verify that signature files exist
+        run: |
+          ls -l dist
+          test -n "$(ls dist/*.whl 2>/dev/null)" || (echo "No wheels found" && exit 1)
+          # At least one signature should exist; if not, fail so we notice
+          test -n "$(ls dist/*.sig 2>/dev/null)" || (echo "No .sig files produced" && exit 1)
+          test -n "$(ls dist/*.crt 2>/dev/null)" || (echo "No .crt files produced" && exit 1)
+
+      - name: Create GitHub Release (attach dists, signatures, and provenance if present)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
         with:
           files: |
@@ -95,9 +109,7 @@ jobs:
             dist/*.sig
             dist/*.crt
             dist/*.sigstore
-            dist/attestation.intoto.jsonl
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            dist/provenance.intoto.jsonl
 
       # Skip publish if version already exists on PyPI (avoids "File already exists")
       - name: Skip if version exists on PyPI
