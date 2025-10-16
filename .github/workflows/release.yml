@@ -36,18 +36,12 @@ jobs:
 
       # tag (vX.Y.Z) must match pyproject.toml version (X.Y.Z)
       - name: Check version matches tag
-        id: vercheck
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          PYVER=$(python - <<'PY'
-            import sys, tomllib, pathlib
-            data = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
-            print(data["project"]["version"])
-          PY
-          )
+          PYVER=$(python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
           echo "tag=${TAG}"
           echo "pyproject=${PYVER}"
-          test "$PYVER" = "$TAG" || { echo "ERROR: pyproject.toml version != tag"; exit 1; }
+          test "$PYVER" = "$TAG" || { echo 'ERROR: pyproject.toml version != tag'; exit 1; }
 
       - name: Build distributions
         run: pyproject-build -o dist  
