@@ -42,18 +42,26 @@ jobs:
           echo "pyproject=${PYVER}"
           test "$PYVER" = "$TAG" || { echo 'ERROR: pyproject.toml version != tag'; exit 1; }
 
-      - name: Build distributions
-        run: pyproject-build -o dist  # pipx-installed CLI
+      - name: Clean dist
+        run: rm -rf dist/* || true
 
-      - name: Inspect wheel metadata
+      - name: Build distributions
+        run: pyproject-build -o dist  
+
+      - name: Inspect wheel metadata (must have Name & Version)
         run: |
           python - <<'PY'
           import glob, zipfile
           whl = glob.glob("dist/*.whl")[0]
           with zipfile.ZipFile(whl) as z:
-            names = z.namelist()
-            assert any(n.endswith(".dist-info/METADATA") for n in names), "Wheel missing .dist-info/METADATA"
-          print("Wheel metadata present.")
+              names = z.namelist()
+              meta = [n for n in names if n.endswith(".dist-info/METADATA")]
+              assert meta, "Wheel missing .dist-info/METADATA"
+              text = z.read(meta[0]).decode("utf-8", "replace")
+              head = "\n".join(text.splitlines()[:15])
+              print("---- METADATA head ----\n" + head + "\n---- /METADATA ----")
+              assert "Name: decision-security" in text, "METADATA missing Name"
+              assert "Version: " in text, "METADATA missing Version"
           PY
           
       - name: Twine check
