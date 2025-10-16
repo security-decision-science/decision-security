@@ -106,12 +106,22 @@ jobs:
           shopt -s nullglob
           for f in dist/*.whl dist/*.tar.gz; do
             out="${f}.intoto.jsonl"
-            if gh attestation download --repo "$REPO" "$f" --format=jsonl > "$out"; then
-              echo "Saved: $out"
-            else
-              echo "No attestation found yet for $f (continuing)"; rm -f "$out" || true
+            ok=0
+            # Give GitHub a few seconds to make the attestation queriable
+            for i in 1 2 3 4 5; do
+              # Note: no --format flag; write stdout to file
+              if gh attestation download --repo "$REPO" "$f" -d sha256 > "$out"; then
+                ok=1; break
+              fi
+              echo "Attestation not ready for $f (attempt $i/5). Sleeping 5s…"
+              sleep 5
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "WARNING: no attestation found for $f; continuing without ${out}"
+              rm -f "$out" || true
             fi
           done
+          ls -l dist || true
 
       - name: Sign wheels and sdists (Sigstore)
         uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84
