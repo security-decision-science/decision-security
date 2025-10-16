@@ -13,6 +13,8 @@ jobs:
     permissions:
       contents: write     # attach assets to GH Release
       id-token: write     # OIDC for PyPI Trusted Publisher
+      attestations: write
+      
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
@@ -63,7 +65,11 @@ jobs:
           
       # - name: Twine check
       #   run: twine check dist/*
-
+      - name: Generate SLSA provenance for dist/*
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'dist/*'   # attest each file in dist/
+          
       - name: Create GitHub Release (attach dists)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7 # v2.3.4
         with:
