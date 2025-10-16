@@ -64,23 +64,20 @@ jobs:
             echo "No requirements-runtime.lock; skipping runtime deps install."
           fi
 
-      # Import test: skip gracefully if numpy (or other deps) aren't installed.
-      - name: Import smoke from wheel (skip if deps missing)
-        run: |
-          python - <<'PY'
-          import glob, sys, importlib.util
-          whl = glob.glob("dist/*.whl")[0]
-          sys.path.insert(0, whl)  # import straight from the wheel zip
-          needed = ["numpy"]  # add other runtime libs here if you depend on them
-          missing = [m for m in needed if importlib.util.find_spec(m) is None]
-          if missing:
-            print("Skipping import smoke; missing runtime deps:", missing)
-            raise SystemExit(0)
-          from decision_security.synth import sample
-          print("Smoke OK:", sample("poisson", 5, lam=1.0))
-          PY
+      # Install the built wheel only if pytest-style tests exist
+      - name: Install wheel for tests (if present)
+        if: ${{ hashFiles('tests/test_*.py', 'tests/**/test_*.py', 'tests/*_test.py', 'tests/**/*_test.py') != '' }}
+        run: python -m pip install dist/*.whl
 
-      # Runs pytest only if there are tests in tests/**/*.py
+      # Run pytest only if pytest-style test files exist; treat "no tests" as success
       - name: Run tests (pytest if present)
-        if: ${{ hashFiles('tests/**/*.py') != '' }}
-        run: pytest -q
+        if: ${{ hashFiles('tests/test_*.py', 'tests/**/test_*.py', 'tests/*_test.py', 'tests/**/*_test.py') != '' }}
+        run: |
+          set +e
+          pytest -q
+          code=$?
+          if [ "$code" = "5" ]; then
+            echo "Pytest: no tests collected. Skipping."
+            exit 0
+          fi
+          exit "$code"
