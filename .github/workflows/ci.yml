@@ -24,23 +24,17 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6 (full SHA)
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
         with:
           python-version: "3.12"
 
-      # Tools only, via pipx (keeps Scorecard happy)
-      - name: Install pipx + tools (pinned)
+      # Build/test tools from HASHED lock (no raw pip installs)
+      - name: Install build tools (hashed)
         run: |
-          set -euxo pipefail
-          sudo apt-get update
-          sudo apt-get install -y pipx
-          pipx ensurepath
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          pipx install build==1.2.2
-          pipx install pytest==8.3.3
+          python -m pip install --require-hashes -r .github/requirements-build.lock
 
       - name: Build wheel
-        run: pyproject-build -o dist
+        run: python -m build -o dist
 
       - name: Inspect wheel has package files
         run: |
@@ -51,47 +45,28 @@ jobs:
           with zipfile.ZipFile(whl) as z:
             names = [n for n in z.namelist() if n.startswith("decision_security/")]
             print("Files in package:", len(names))
-            assert len(names) > 0, "Wheel missing decision_security/*"
+            assert names, "Wheel missing decision_security/*"
           PY
 
-      - name: Minimal fuzzer (time-boxed 60s)
+      # Install runtime deps from HASHED lock, then install the local wheel WITH its hash
+      - name: Install runtime deps (hashed) + local wheel (hashed)
         run: |
-          # install your wheel so imports work (pulls numpy/scipy etc. as deps)
-          python -m pip install -U pip
-          python -m pip install dist/*.whl
-          # run the fuzzer if present (non-blocking or blocking: pick ONE line)
-          if [ -f tools/fuzz_synth.py ]; then
-            python tools/fuzz_synth.py --iterations 600 --timeout-sec 60
-            # If you prefer advisory-only while implementing, use:
-            # python tools/fuzz_synth.py --iterations 600 --timeout-sec 60 || true
-          else
-            echo "No tools/fuzz_synth.py; skipping fuzz."
-          fi
-          
-      - name: Install runtime deps (if lock present)
-        run: |
-          if [ -f requirements-runtime.lock ]; then
-            python -m pip install --require-hashes -r requirements-runtime.lock
-          else
-            echo "No requirements-runtime.lock; skipping runtime deps install."
-          fi
-
-      # Install pytest and your wheel into the runner's Python (only if tests exist)
-      - name: Install test runner + wheel (if tests present)
-        if: ${{ hashFiles('tests/test_*.py', 'tests/**/test_*.py', 'tests/*_test.py', 'tests/**/*_test.py') != '' }}
-        run: |
-          python -m pip install -U pip
-          python -m pip install pytest==8.3.3
-          python -m pip install dist/*.whl
-          # sanity: ensure deps are visible to this Python
-          python - <<'PY'
-          import importlib.util
-          for m in ["numpy","scipy","pandas","matplotlib","decision_security"]:
-              assert importlib.util.find_spec(m), f"Missing after install: {m}"
-          print("Runtime deps OK")
+          python -m pip install --require-hashes -r requirements-runtime.lock
+          WHEEL=$(ls dist/*.whl)
+          HASH=$(python - <<'PY'
+          import glob, hashlib
+          p = glob.glob("dist/*.whl")[0]
+          print(hashlib.sha256(open(p,"rb").read()).hexdigest())
           PY
+          )
+          printf "%s --hash=sha256:%s\n" "$WHEEL" "$HASH" > wheel.requirements.txt
+          python -m pip install --require-hashes --no-deps -r wheel.requirements.txt
 
-      # Run pytest only if tests exist; treat "no tests" exit code (5) as success
+      # Minimal fuzzer (fails CI on real invariant failures). Add 'continue-on-error: true' if you want advisory-only.
+      - name: Minimal fuzzer (60s)
+        run: python tools/fuzz_synth.py --iterations 600 --timeout-sec 60 --seed 123
+
+      # Run pytest only if tests exist; tools already installed from build lock
       - name: Run tests (pytest if present)
         if: ${{ hashFiles('tests/test_*.py', 'tests/**/test_*.py', 'tests/*_test.py', 'tests/**/*_test.py') != '' }}
         run: |
