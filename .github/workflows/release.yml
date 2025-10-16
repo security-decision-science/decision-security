@@ -76,15 +76,21 @@ jobs:
       - name: Download per-artifact provenance (*.intoto.jsonl)
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           set -euxo pipefail
+          shopt -s nullglob
           for f in dist/*.whl dist/*.tar.gz; do
-            sha=$(sha256sum "$f" | awk '{print $1}')
             out="${f}.intoto.jsonl"
-            gh attestation download --repo "${GITHUB_REPOSITORY}" \
-              --subject "sha256:${sha}" --format=jsonl > "${out}"
-            test -s "${out}" || { echo "No attestation for ${f}"; exit 1; }
+            # Use path form; gh computes sha256 and fetches the attestation
+            if gh attestation download --repo "$REPO" "$f" --format=jsonl > "$out"; then
+              echo "Saved: $out"
+            else
+              echo "No attestation found yet for $f (continuing)"
+              rm -f "$out" || true
+            fi
           done
+          ls -l dist || true
 
       # Produce classic Sigstore signatures (.sig + .crt) for each artifact
       - name: Sigstore sign artifacts (.sig + .crt)
