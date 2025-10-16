@@ -69,6 +69,12 @@ jobs:
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
         with:
           subject-path: 'dist/*'   # attest each file in dist/
+
+      # optional: add signatures users can download
+      - name: Sign wheels and sdists (Sigstore)
+        uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84
+        with:
+          inputs: dist/*  # signs every built (wheels/sdists) 
           
       - name: Create GitHub Release (attach dists)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7 # v2.3.4
@@ -76,6 +82,9 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/*.whl
+            dist/*.sig        
+            dist/*.crt        
+            dist/*.sigstore 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
