@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags: [ 'v*.*.*' ]   # only runs on semver-like tags
-  workflow_dispatch: {}  # manual runs won't publish unless also with a tag
+    tags: [ 'v*.*.*' ]   # ← only runs on release tags
 
 permissions:
   contents: read
@@ -23,7 +22,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Tools via pipx (pinned; no raw pip)
+      # Build tools via pipx (pinned versions; no raw pip)
       - name: Install pipx + tools
         run: |
           set -euxo pipefail
@@ -34,7 +33,7 @@ jobs:
           pipx install build==1.2.2
           pipx install twine==5.1.1
 
-      # tag (vX.Y.Z) must match pyproject.toml version (X.Y.Z)
+      # Guard: tag (vX.Y.Z) must equal pyproject.toml version (X.Y.Z)
       - name: Check version matches tag
         run: |
           TAG="${GITHUB_REF_NAME#v}"
@@ -44,7 +43,7 @@ jobs:
           test "$PYVER" = "$TAG" || { echo 'ERROR: pyproject.toml version != tag'; exit 1; }
 
       - name: Build distributions
-        run: pyproject-build -o dist  
+        run: pyproject-build -o dist  # pipx-installed CLI
 
       - name: Twine check
         run: twine check dist/*
@@ -58,24 +57,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # skip if version already on PyPI (prevents "File already exists")
+      # Skip publish if version already exists on PyPI (avoids "File already exists")
       - name: Skip if version exists on PyPI
         id: pypi-exists
         run: |
           PKG="decision-security"
           VER="${GITHUB_REF_NAME#v}"
-          python - <<PY
+          python - <<PY || exit 0
             import json, sys, urllib.request
             pkg = sys.argv[1]; ver = sys.argv[2]
-            try:
-              with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
-                data = json.load(r)
-              if ver in data.get("releases", {}):
-                print(f"Version {ver} already on PyPI; skipping publish.")
-                sys.exit(78)  # neutral
-            except Exception:
-              pass
+            with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
+              data = json.load(r)
+            if ver in data.get("releases", {}):
+              print(f"Version {ver} already on PyPI; skipping publish.")
+              sys.exit(78)  # neutral
           PY
+          "$PKG" "$VER"
         continue-on-error: true
 
       - name: Publish to PyPI (OIDC Trusted Publisher)
