@@ -92,24 +92,26 @@ jobs:
         with:
           inputs: dist/*
 
-      - name: Verify that signature files exist
+      - name: Verify signature artifacts exist
         run: |
-          ls -l dist
-          test -n "$(ls dist/*.whl 2>/dev/null)" || (echo "No wheels found" && exit 1)
-          # At least one signature should exist; if not, fail so we notice
-          test -n "$(ls dist/*.sig 2>/dev/null)" || (echo "No .sig files produced" && exit 1)
-          test -n "$(ls dist/*.crt 2>/dev/null)" || (echo "No .crt files produced" && exit 1)
-
+          ls -al dist
+          if ls dist/*.sigstore.json >/dev/null 2>&1; then
+            echo "Found Sigstore bundle(s) (*.sigstore.json)."
+          elif ls dist/*.sig >/dev/null 2>&1 && ls dist/*.crt >/dev/null 2>&1; then
+            echo "Found legacy .sig/.crt pair(s)."
+          else
+            echo "No signature artifacts found in dist/"; exit 1
+          fi
+          
       - name: Create GitHub Release (attach dists, signatures, and provenance if present)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
         with:
           files: |
             dist/*.tar.gz
             dist/*.whl
-            dist/*.sig
-            dist/*.crt
-            dist/*.sigstore
-            dist/provenance.intoto.jsonl
+            dist/*.sigstore.json  # <- Sigstore bundles 
+            dist/*.sig            # (kept for future/compat)
+            dist/*.crt            # (kept for future/compat)
 
       # Skip publish if version already exists on PyPI (avoids "File already exists")
       - name: Skip if version exists on PyPI
