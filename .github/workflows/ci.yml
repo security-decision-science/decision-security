@@ -7,7 +7,6 @@ on:
     branches: [ "main" ]
   workflow_dispatch: {}
 
-# Least-privilege token by default
 permissions:
   contents: read
 
@@ -25,11 +24,8 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7 # v6
-        with:
-          python-version: "3.12"
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6 (full SHA)
 
-      # Use pipx so there are no raw pip installs in workflows
       - name: Install pipx + tools (pinned)
         run: |
           set -euxo pipefail
@@ -60,12 +56,11 @@ jobs:
           python - <<'PY'
           import glob, sys
           whl = glob.glob("dist/*.whl")[0]
-          sys.path.insert(0, whl)  # allow import from wheel zip
+          sys.path.insert(0, whl)
           from decision_security.synth import sample
           print("Smoke OK:", sample("poisson", 5, lam=1.0))
           PY
 
-      # This step runs tests when you add them; otherwise it cleanly skips.
       - name: Run tests (pytest if present)
         run: |
           if ls -1 tests/*.py tests/**/*.py 2>/dev/null | grep -q .; then
