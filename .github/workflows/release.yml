@@ -12,8 +12,8 @@ jobs:
   build-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write        # create/upload GitHub Release assets
-      id-token: write        # OIDC for PyPI + Sigstore
+      contents: write        # upload to GitHub Releases
+      id-token: write        # OIDC for PyPI (Trusted Publisher)
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Tools via pipx (no pipCommand)
-      - name: Install pipx + tools (pinned)
+      # Build with pinned tool via pipx
+      - name: Install pipx + build
         run: |
           set -euxo pipefail
           sudo apt-get update
@@ -32,14 +32,16 @@ jobs:
           pipx ensurepath
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           pipx install build==1.2.2
-          pipx install twine==5.1.1
 
       - name: Build distributions
+        run: python -m build -o dist
+
+      - name: Twine check wheels/sdist
         run: |
-          pyproject-build -o dist
+          pipx install twine==5.1.1
           twine check dist/*
 
-      - name: Create GitHub Release (upload artifacts)
+      - name: Create GitHub Release (attach artifacts)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7 # v2.3.4
         with:
           files: |
@@ -48,20 +50,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to PyPI (OIDC)
+      - name: Publish to PyPI (OIDC Trusted Publisher)
         if: startsWith(github.ref, 'refs/tags/')
         uses: pypa/gh-action-pypi-publish@f8d218034565c4b29629e190f46f5d54e3637bf4 # v1.12.2
         with:
           print-hash: true
-
-  sign-release:
-    needs: build-publish
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write         # keyless Sigstore
-    steps:
-      - name: Sign & attach with Sigstore
-        uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84 # v3.0.1
-        with:
-          release-signing-artifacts: true
