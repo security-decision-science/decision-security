@@ -46,23 +46,23 @@ jobs:
         run: rm -rf dist/* || true
 
       - name: Build distributions
-        run: pyproject-build -o dist  
+        run: pyproject-build -o dist   # or: python -m build -o dist
 
-      - name: Inspect wheel metadata (must have Name & Version)
+      - name: Inspect wheel METADATA (must have Name & Version)
         run: |
-          python - <<'PY'
-          import glob, zipfile
-          whl = glob.glob("dist/*.whl")[0]
-          with zipfile.ZipFile(whl) as z:
-              names = z.namelist()
-              meta = [n for n in names if n.endswith(".dist-info/METADATA")]
-              assert meta, "Wheel missing .dist-info/METADATA"
-              text = z.read(meta[0]).decode("utf-8", "replace")
-              head = "\n".join(text.splitlines()[:15])
-              print("---- METADATA head ----\n" + head + "\n---- /METADATA ----")
-              assert "Name: decision-security" in text, "METADATA missing Name"
-              assert "Version: " in text, "METADATA missing Version"
-          PY
+            python - <<'PY'
+            import glob, zipfile
+            whl = glob.glob("dist/*.whl")[0]
+            with zipfile.ZipFile(whl) as z:
+                meta = [n for n in z.namelist() if n.endswith(".dist-info/METADATA")]
+                assert meta, "Wheel missing .dist-info/METADATA"
+                text = z.read(meta[0]).decode()
+                print("---- METADATA head ----")
+                print("\n".join(text.splitlines()[:15]))
+                print("---- /METADATA ----")
+                assert "Name: decision-security" in text, "METADATA missing Name"
+                assert "Version: " in text, "METADATA missing Version"
+            PY  
           
       - name: Twine check
         run: twine check dist/*
