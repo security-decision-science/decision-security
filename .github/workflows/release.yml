@@ -66,7 +66,7 @@ jobs:
       # - name: Twine check
       #   run: twine check dist/*
       - name: Generate SLSA provenance for dist/*
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
         with:
           subject-path: 'dist/*'   # attest each file in dist/
           
