@@ -75,15 +75,19 @@ jobs:
         with:
           inputs: dist/*
 
+      - name: Show signed files
+        run: ls -al dist
+        
       - name: Create GitHub Release (attach dists)
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
         with:
           files: |
             dist/*.tar.gz
             dist/*.whl
-            dist/*.sig
-            dist/*.crt
-            dist/*.sigstore
+            dist/*.sig        # produced by Sigstore
+            dist/*.crt        # produced by Sigstore
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Skip publish if version already exists on PyPI (avoids "File already exists")
       - name: Skip if version exists on PyPI
@@ -91,15 +95,18 @@ jobs:
         run: |
           PKG="decision-security"
           VER="${GITHUB_REF_NAME#v}"
-          python - <<PY || exit 0
+          python - "$PKG" "$VER" <<'PY'
             import json, sys, urllib.request
-            pkg = sys.argv[1]; ver = sys.argv[2]
-            with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
-              data = json.load(r)
-            if ver in data.get("releases", {}):
-              print(f"Version {ver} already on PyPI; skipping publish.")
-              sys.exit(78)  # neutral
-          python - "$PKG" "$VER" <<'PY' || exit 0
+            pkg, ver = sys.argv[1], sys.argv[2]
+            try:
+              with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
+                data = json.load(r)
+              if ver in data.get("releases", {}):
+                print(f"Version {ver} already on PyPI; skipping publish.")
+                raise SystemExit(0)    # success -> we will skip publish
+          except Exception as e:
+            print("PyPI check error or no releases yet:", e)
+            raise SystemExit(1)            # not found -> publish
           PY
         continue-on-error: true
 
