@@ -97,8 +97,13 @@ jobs:
       - name: Verify signature artifacts exist
         run: |
           ls -al dist
-          test -n "$(ls dist/*.sig 2>/dev/null)" || (echo "No .sig files produced" && exit 1)
-          test -n "$(ls dist/*.crt 2>/dev/null)" || (echo "No .crt files produced" && exit 1)
+          if ls dist/*.sigstore.json >/dev/null 2>&1; then
+            echo "Found Sigstore bundle(s) (*.sigstore.json)."
+          elif ls dist/*.sig >/dev/null 2>&1 && ls dist/*.crt >/dev/null 2>&1; then
+            echo "Found legacy .sig/.crt pair(s)."
+          else
+            echo "No signature artifacts found in dist/"; exit 1
+          fi
     
       # Create / update GitHub Release and attach all assets (dists + sigs + provenance)
       - name: Create GitHub Release (attach assets)
@@ -110,6 +115,7 @@ jobs:
             dist/*.sig
             dist/*.crt
             dist/*.intoto.jsonl
+            dist/*.sigstore.json 
 
       # Skip publish if this version already exists on PyPI
       - name: Skip if version exists on PyPI
