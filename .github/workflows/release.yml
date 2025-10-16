@@ -92,13 +92,17 @@ jobs:
           done
           ls -l dist || true
 
-      # Produce classic Sigstore signatures (.sig + .crt) for each artifact
       - name: Sigstore sign artifacts (.sig + .crt)
         run: |
           set -euxo pipefail
+          # Fallback: if 'sigstore' not found for any reason, install into job's Python
+          command -v sigstore >/dev/null 2>&1 || python -m pip install 'sigstore==3.6.3'
           for f in dist/*.whl dist/*.tar.gz; do
-            python -m sigstore sign --bundle false --yes "$f"
-            # produces $f.sig and $f.crt
+            # produce detached signature + certificate per artifact
+            sigstore sign --yes \
+              --output-signature "${f}.sig" \
+              --output-certificate "${f}.crt" \
+              "$f"
           done
 
       # Create / update GitHub Release and attach all assets (dists + sigs + provenance)
