@@ -64,17 +64,27 @@ jobs:
             echo "No requirements-runtime.lock; skipping runtime deps install."
           fi
 
-      # Install the built wheel only if pytest-style tests exist
-      - name: Install wheel for tests (if present)
+      # Install pytest and your wheel into the runner's Python (only if tests exist)
+      - name: Install test runner + wheel (if tests present)
         if: ${{ hashFiles('tests/test_*.py', 'tests/**/test_*.py', 'tests/*_test.py', 'tests/**/*_test.py') != '' }}
-        run: python -m pip install dist/*.whl
+        run: |
+          python -m pip install -U pip
+          python -m pip install pytest==8.3.3
+          python -m pip install dist/*.whl
+          # sanity: ensure deps are visible to this Python
+          python - <<'PY'
+          import importlib.util
+          for m in ["numpy","scipy","pandas","matplotlib","decision_security"]:
+              assert importlib.util.find_spec(m), f"Missing after install: {m}"
+          print("Runtime deps OK")
+          PY
 
-      # Run pytest only if pytest-style test files exist; treat "no tests" as success
+      # Run pytest only if tests exist; treat "no tests" exit code (5) as success
       - name: Run tests (pytest if present)
         if: ${{ hashFiles('tests/test_*.py', 'tests/**/test_*.py', 'tests/*_test.py', 'tests/**/*_test.py') != '' }}
         run: |
           set +e
-          pytest -q
+          python -m pytest -q
           code=$?
           if [ "$code" = "5" ]; then
             echo "Pytest: no tests collected. Skipping."
