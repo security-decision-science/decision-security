@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: [ 'v*.*.*' ]   # ← only runs on release tags
+    tags: ['v*.*.*']  # runs only on release tags like v0.1.0
 
 permissions:
   contents: read
@@ -11,20 +11,20 @@ jobs:
   build-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write     # attach assets to GH Release
-      id-token: write     # OIDC for PyPI Trusted Publisher
+      contents: write       # attach assets to GH Release
+      id-token: write       # OIDC for PyPI Trusted Publisher + attestations
       attestations: write
-      
+
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7 # v6
         with:
           python-version: "3.12"
 
-      # Build tools via pipx (pinned versions; no raw pip)
+      # Tools via pipx (no raw pip install into runner)
       - name: Install pipx + tools
         run: |
           set -euxo pipefail
@@ -34,8 +34,9 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           pipx install build==1.2.2
           pipx install twine==5.1.1
+          pipx install sigstore==3.6.3   # CLI used to produce .sig + .crt
 
-      # Guard: tag (vX.Y.Z) must equal pyproject.toml version (X.Y.Z)
+      # Tag must match version in pyproject.toml (vX.Y.Z vs X.Y.Z)
       - name: Check version matches tag
         run: |
           TAG="${GITHUB_REF_NAME#v}"
@@ -48,90 +49,81 @@ jobs:
         run: rm -rf dist/* || true
 
       - name: Build distributions
-        run: pyproject-build -o dist   # or: python -m build -o dist
+        run: pyproject-build -o dist
 
       - name: Inspect wheel METADATA (must have Name & Version)
         run: |
-          python -c "import glob,zipfile; \
-          whl=glob.glob('dist/*.whl')[0]; \
-          z=zipfile.ZipFile(whl); names=z.namelist(); \
-          meta=[n for n in names if n.endswith('.dist-info/METADATA')]; \
-          assert meta, 'Wheel missing .dist-info/METADATA'; \
-          text=z.read(meta[0]).decode(); \
-          print('---- METADATA head ----'); \
-          print('\n'.join(text.splitlines()[:15])); \
-          print('---- /METADATA ----'); \
-          assert 'Name: decision-security' in text and 'Version: ' in text" 
-          
-      # - name: Twine check
-      #   run: twine check dist/*
-      - name: Show built files
-        run: ls -l dist
+          python - <<'PY'
+          import glob, zipfile
+          whl = glob.glob('dist/*.whl')[0]
+          with zipfile.ZipFile(whl) as z:
+              meta = [n for n in z.namelist() if n.endswith('.dist-info/METADATA')]
+              assert meta, 'Wheel missing .dist-info/METADATA'
+              head = z.read(meta[0]).decode().splitlines()[:15]
+              print('---- METADATA head ----'); print('\n'.join(head)); print('---- /METADATA ----')
+              text = '\n'.join(head)
+              assert 'Name: decision-security' in text or 'Name: decision_security' in text
+          PY
 
-      # Create SLSA provenance (stores in GitHub Attestations, and also emits a local bundle path)
-      - name: Generate SLSA provenance for dist/*
+      # Create provenance in GitHub Attestations for each dist/*
+      - name: Generate SLSA provenance (GitHub Attestations)
         id: prov
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
         with:
-          subject-path: 'dist/*'   # wheel and sdist
+          subject-path: 'dist/*'
 
-      # If a local bundle was produced, copy it into dist/ so it’s attached to the Release
-      - name: Save provenance bundle for release (if present)
-        if: ${{ steps.prov.outputs.bundle-path != '' }}
+      # Download the intoto JSONL for each artifact so Scorecard can see it
+      - name: Download per-artifact provenance (*.intoto.jsonl)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Bundle path: ${{ steps.prov.outputs.bundle-path }}"
-          cp "${{ steps.prov.outputs.bundle-path }}" dist/provenance.intoto.jsonl
+          set -euxo pipefail
+          for f in dist/*.whl dist/*.tar.gz; do
+            sha=$(sha256sum "$f" | awk '{print $1}')
+            out="${f}.intoto.jsonl"
+            gh attestation download --repo "${GITHUB_REPOSITORY}" \
+              --subject "sha256:${sha}" --format=jsonl > "${out}"
+            test -s "${out}" || { echo "No attestation for ${f}"; exit 1; }
+          done
 
-      - name: Show attestation link
+      # Produce classic Sigstore signatures (.sig + .crt) for each artifact
+      - name: Sigstore sign artifacts (.sig + .crt)
         run: |
-          echo "Attestation URL: ${{ steps.prov.outputs.attestation-url }}"
+          set -euxo pipefail
+          for f in dist/*.whl dist/*.tar.gz; do
+            python -m sigstore sign --bundle false --yes "$f"
+            # produces $f.sig and $f.crt
+          done
 
-      # Sign artifacts with Sigstore (writes .sig and .crt next to files in dist/)
-      - name: Sign wheels and sdists (Sigstore)
-        uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84
-        with:
-          inputs: dist/*
-
-      - name: Verify signature artifacts exist
-        run: |
-          ls -al dist
-          if ls dist/*.sigstore.json >/dev/null 2>&1; then
-            echo "Found Sigstore bundle(s) (*.sigstore.json)."
-          elif ls dist/*.sig >/dev/null 2>&1 && ls dist/*.crt >/dev/null 2>&1; then
-            echo "Found legacy .sig/.crt pair(s)."
-          else
-            echo "No signature artifacts found in dist/"; exit 1
-          fi
-          
-      - name: Create GitHub Release (attach dists, signatures, and provenance if present)
-        uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
+      # Create / update GitHub Release and attach all assets (dists + sigs + provenance)
+      - name: Create GitHub Release (attach assets)
+        uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7 # v2.3.4
         with:
           files: |
-            dist/*.tar.gz
             dist/*.whl
-            dist/*.sigstore.json  # <- Sigstore bundles 
-            dist/*.sig            # (kept for future/compat)
-            dist/*.crt            # (kept for future/compat)
+            dist/*.tar.gz
+            dist/*.sig
+            dist/*.crt
+            dist/*.intoto.jsonl
 
-      # Skip publish if version already exists on PyPI (avoids "File already exists")
+      # Skip publish if this version already exists on PyPI
       - name: Skip if version exists on PyPI
         id: pypi-exists
         run: |
           PKG="decision-security"
           VER="${GITHUB_REF_NAME#v}"
-          python - <<PY || exit 0
-            import json, sys, urllib.request
-            pkg = sys.argv[1]; ver = sys.argv[2]
-            with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
+          python - <<'PY' "$PKG" "$VER" || exit 0
+          import json, sys, urllib.request
+          pkg, ver = sys.argv[1], sys.argv[2]
+          with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
               data = json.load(r)
-            if ver in data.get("releases", {}):
+          if ver in data.get("releases", {}):
               print(f"Version {ver} already on PyPI; skipping publish.")
-              sys.exit(78)  # neutral
-          python - "$PKG" "$VER" <<'PY' || exit 0
+              sys.exit(78)  # neutral exit
           PY
         continue-on-error: true
 
-      - name: Publish to PyPI (OIDC Trusted Publisher)
+      - name: Publish to PyPI (Trusted Publisher)
         if: startsWith(github.ref, 'refs/tags/') && steps.pypi-exists.outcome != 'success'
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
