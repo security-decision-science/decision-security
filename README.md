@@ -5,17 +5,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) 
 [![Linkedin Badge](https://img.shields.io/badge/-LinkedIn-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/voiculaura/)](https://www.linkedin.com/in/voiculaura/)
 
-
 # Decision Security
 
 Reusable **decision-science utilities for security** — Monte Carlo risk bands, Bayesian updates & calibration, survival helpers, Value of Information, light causal helpers, and visualization.
 
+Part of [Apropos Security](https://apropos-security.com) · [Notebooks](https://security-decision-science.github.io/security-decision-science/) · [Playground](https://github.com/security-decision-science/security-decision-labs) · [Blog](https://medium.com/apropos-security)
+
 ## Install
-Pre-release for now:
+
 ```bash
 pip install --pre decision-security
-# or pin:
-# pip install decision-security==0.1.0a9 
 ```
 
 ## Quickstart
@@ -31,22 +30,25 @@ print(var_es(losses))          # (VaR95, ES95)
 ```
 
 ## Modules
-	•	synth: synthetic data (heavy-tail losses, counts, mixtures, survival with censoring, categorical/Dirichlet).
-	•	montecarlo: Poisson frequency + severity, risk bands, VaR/ES.
-	•	bayes: Beta-Binomial & Normal(known σ) updates, calibration helpers.
-	•	survival: simple Kaplan–Meier & Nelson–Aalen estimates.
-	•	voi: Expected Value of Perfect Information (EVPI) and simple ROI selection.
-	•	causal: tiny DAG utilities (parents, descendants, naive backdoor set).
-	•	viz: small matplotlib helpers (loss distribution, risk bands, KM curves).
+
+- **synth** — synthetic data (heavy-tail losses, counts, mixtures, survival with censoring, categorical/Dirichlet)
+- **montecarlo** — Poisson frequency + severity, risk bands, VaR/ES
+- **bayes** — Beta-Binomial & Normal(known σ) updates, calibration helpers
+- **survival** — simple Kaplan-Meier & Nelson-Aalen estimates
+- **voi** — Expected Value of Perfect Information (EVPI) and simple ROI selection
+- **causal** — tiny DAG utilities (parents, descendants, naive backdoor set)
+- **viz** — small matplotlib helpers (loss distribution, risk bands, KM curves)
 
 ## Status
 
-0.x (APIs may change).
+0.x pre-release (APIs may change).
 
-## Docs & examples 
+## Docs & examples
 
-Security Decision Science Book and the Security Decision Labs playground (coming soon).
+- **Notebooks:** [Security Decision Science](https://security-decision-science.github.io/security-decision-science/) — 19 interactive notebooks using this library
+- **Playground:** [Security Decision Labs](https://github.com/security-decision-science/security-decision-labs) — FAIR Simulator app
+- **Hub:** [apropos-security.com](https://apropos-security.com)
 
 ## Contributing
 
-Issues and PRs welcome. For non-public questions, contact me on LinkedIn.
+Issues and PRs welcome. For non-public questions, contact via [LinkedIn](https://www.linkedin.com/in/voiculaura/).
