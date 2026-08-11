@@ -4,12 +4,12 @@ def evpi(loss_matrix):
     """
     Expected Value of Perfect Information.
     loss_matrix: shape (S, D) — S scenarios (or posterior draws), D decisions.
-    EVPI = E[min_d L(d,θ)] - min_d E[L(d,θ)]
+    EVPI = min_d E[L(d,θ)] - E[min_d L(d,θ)]  (always >= 0)
     """
     L = np.asarray(loss_matrix, dtype=float)
-    term1 = float(L.min(axis=1).mean())
-    term2 = float(L.mean(axis=0).min())
-    return term1 - term2
+    expected_min = float(L.min(axis=1).mean())
+    min_expected = float(L.mean(axis=0).min())
+    return min_expected - expected_min
 
 def select_controls_by_roi(deltas, costs, budget):
     """
