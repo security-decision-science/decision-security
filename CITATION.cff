@@ -15,6 +15,6 @@ keywords:
   - causal inference
 repository-code: "https://github.com/security-decision-science/decision-security"
 license: MIT
-version: "0.1.0a1"
+version: "0.1.0"
 date-released: "2025-10-09"
 doi: ""
