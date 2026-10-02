@@ -7,6 +7,7 @@
 
 # Decision Security
 
+Built and maintained by Laura Voicu ([LinkedIn](https://www.linkedin.com/in/voiculaura/)).
 Reusable **decision-science utilities for security** — Monte Carlo risk bands, Bayesian updates & calibration, survival helpers, Value of Information, light causal helpers, and visualization.
 
 Part of [Apropos Security](https://apropos-security.com) · [Notebooks](https://security-decision-science.github.io/security-decision-science/) · [Playground](https://github.com/security-decision-science/security-decision-labs) · [Blog](https://medium.com/apropos-security)
